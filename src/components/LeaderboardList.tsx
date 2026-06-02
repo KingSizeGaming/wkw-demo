@@ -1,0 +1,56 @@
+'use client';
+
+import Image from 'next/image';
+import Link from 'next/link';
+import {useState} from 'react';
+import LoadingModal from '@/components/modals/LoadingModal';
+
+type LeaderboardRow = {
+  leaderboardId: string | null;
+  entryCount: number;
+  totalPoints: number;
+  canView?: boolean;
+};
+
+export default function LeaderboardList({leaderboards, weekId, token, hasToken}: {leaderboards: LeaderboardRow[]; weekId: string; token?: string; hasToken: boolean}) {
+  const [loadingId, setLoadingId] = useState<string | null>(null);
+
+  const buildHref = (leaderboardId: string) => `/leaderboard/${leaderboardId}?weekId=${weekId}${token ? `&token=${token}` : ''}`;
+
+  return (
+    <div className="relative">
+      <ul className="overflow-y-auto px-3 pr-1 pt-4 wkw-scrollbar">
+        {leaderboards.map((row, index) => {
+          const hasCrown = index < 1;
+          const content = (
+            <div className="relative flex h-18 items-center justify-between px-5 text-white">
+              <Image src="/images/player_info_panel.png" alt="" fill sizes="(max-width: 500px) 100vw, 500px" style={{ objectFit: 'fill' }} />
+              {hasCrown && <Image src="/images/crown.png" alt="" width={20} height={20} sizes="56px" className="absolute top-0.5 -translate-y-1/2 -left-4 w-14 z-20" />}
+              <div className="relative mb-1 z-10 flex flex-1 items-center">
+                <span className="leaderboard-id text-3xl tracking-wider ms-3 font-semibold">{row.leaderboardId ?? 'Unknown'}</span>
+              </div>
+              <div className="leaderboard-points-container relative z-10 h-11 px-6 flex items-center justify-center shrink-0">
+                <Image src="/images/player_points_panel.png" alt="" fill sizes="120px" style={{ objectFit: 'fill' }} />
+                <span className="leaderboard-points relative z-10 text-3xl tracking-wide font-bold">{row.totalPoints}ps</span>
+              </div>
+            </div>
+          );
+
+          if (row.leaderboardId && row.canView && hasToken) {
+            return (
+              <li key={row.leaderboardId}>
+                <Link href={buildHref(row.leaderboardId)} onClick={() => setLoadingId(row.leaderboardId)}>
+                  {content}
+                </Link>
+              </li>
+            );
+          }
+
+          return <li key={row.leaderboardId ?? 'unknown'}>{content}</li>;
+        })}
+      </ul>
+
+      {loadingId && <LoadingModal />}
+    </div>
+  );
+}
