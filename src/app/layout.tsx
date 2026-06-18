@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import "./responsive.css";
 
@@ -7,6 +7,10 @@ export const metadata: Metadata = {
   icons: {
     icon: "/images/wkw_logo.png",
   },
+};
+
+export const viewport: Viewport = {
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
