@@ -14,6 +14,13 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: result.error }, { status: result.status });
   }
 
-  const { ok: _ok, ...body } = result;
-  return NextResponse.json(body);
+  return NextResponse.json({
+    weekId: result.weekId,
+    pickStatus: result.pickStatus,
+    picksAvailable: result.picksAvailable,
+    predictionToken: result.predictionToken,
+    nextWeekStartDate: result.nextWeekStartDate,
+    entryWeekId: result.entryWeekId,
+    standing: result.standing,
+  });
 }
