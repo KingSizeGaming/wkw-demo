@@ -3,17 +3,19 @@
 import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import PredictionClient from '@/components/forms/PredictionClient';
+import PlayHomeScreen from '@/components/forms/PlayHomeScreen';
 import StepBar from '@/components/ui/StepBar';
 
 const MOCK_SA_ID = '9001015009089';
 const MOCK_FIRST_NAME = 'Sipho';
 const MOCK_LAST_NAME = 'Dlamini';
 
-type Step = 'welcome' | 'tag' | 'predict';
+type Step = 'welcome' | 'tag' | 'home' | 'predict';
 
 type StatusData = {
   registered: boolean;
   predictionToken?: string | null;
+  leaderboardId?: string | null;
 };
 
 export default function PlayPage() {
@@ -21,6 +23,7 @@ export default function PlayPage() {
   const [statusData, setStatusData] = useState<StatusData | null>(null);
   const [statusLoading, setStatusLoading] = useState(true);
   const [predictionToken, setPredictionToken] = useState<string | null>(null);
+  const [leaderboardId, setLeaderboardId] = useState<string | null>(null);
 
   const [letters, setLetters] = useState<[string, string, string]>(['', '', '']);
   const inputRef0 = useRef<HTMLInputElement>(null);
@@ -71,19 +74,32 @@ export default function PlayPage() {
           desiredLeaderboardName: previewTag,
         }),
       });
-      const data = await res.json() as { predictionToken?: string; error?: string };
+      const data = await res.json() as { predictionToken?: string; leaderboardId?: string; error?: string };
       if (!res.ok || data.error) {
         setRegisterError(data.error ?? 'Registration failed.');
         return;
       }
-      setPredictionToken(data.predictionToken ?? null);
-      setStep('predict');
+      setLeaderboardId(data.leaderboardId ?? null);
+      setStep('home');
     } catch {
       setRegisterError('Something went wrong. Please try again.');
     } finally {
       setRegisterLoading(false);
     }
   };
+
+  // Home step: render PlayHomeScreen directly (full screen, no chrome)
+  if (step === 'home' && leaderboardId) {
+    return (
+      <PlayHomeScreen
+        leaderboardId={leaderboardId}
+        onPlayNow={(token) => {
+          setPredictionToken(token);
+          setStep('predict');
+        }}
+      />
+    );
+  }
 
   // Predict step: render PredictionClient directly (full screen, no chrome)
   if (step === 'predict' && predictionToken) {
@@ -154,22 +170,16 @@ export default function PlayPage() {
               </button>
             )}
 
-            {!statusLoading && statusData?.registered && statusData.predictionToken && (
+            {!statusLoading && statusData?.registered && (
               <button
                 onClick={() => {
-                  setPredictionToken(statusData.predictionToken!);
-                  setStep('predict');
+                  setLeaderboardId(statusData.leaderboardId ?? null);
+                  setStep('home');
                 }}
                 className="w-full h-12 bg-[#f6e8a0] text-[#220037] font-black uppercase tracking-wide rounded-full text-sm mt-2"
               >
                 Play Now
               </button>
-            )}
-
-            {!statusLoading && statusData?.registered && !statusData.predictionToken && (
-              <p className="text-[#9b59b6] text-sm text-center">
-                You&apos;ve already played this week. Come back next week!
-              </p>
             )}
           </div>
         )}
