@@ -17,13 +17,13 @@ export async function GET(request: NextRequest) {
   }
 
   const userRows = await db
-    .select({ waNumber: users.waNumber, state: users.state })
+    .select({ waNumber: users.waNumber, state: users.state, leaderboardId: users.leaderboardId })
     .from(users)
     .where(and(eq(users.saIdHash, saIdHash), eq(users.state, 'ACTIVE')))
     .limit(1);
 
   if (userRows.length === 0) {
-    return NextResponse.json({ registered: false });
+    return NextResponse.json({ registered: false, leaderboardId: null });
   }
 
   const weekId = getCurrentWeekId();
@@ -46,5 +46,6 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({
     registered: true,
     predictionToken: linkRows[0]?.token ?? null,
+    leaderboardId: userRows[0].leaderboardId,
   });
 }
