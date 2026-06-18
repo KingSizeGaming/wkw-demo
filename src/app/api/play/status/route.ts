@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, desc } from 'drizzle-orm';
 import { db } from '@/db';
 import { users, links } from '@/db/schema';
 import { hashSaId } from '@/lib/sa-id-server';
@@ -36,17 +36,15 @@ export async function GET(request: NextRequest) {
       and(
         eq(links.waNumber, waNumber),
         eq(links.type, 'PREDICTION'),
-        eq(links.status, 'VALID')
+        eq(links.status, 'VALID'),
+        eq(links.weekId, weekId)
       )
     )
+    .orderBy(desc(links.createdAt))
     .limit(1);
-
-  // Filter by weekId in JS because links.weekId can be null and Drizzle
-  // eq() on a nullable column excludes rows where the column IS NULL.
-  const weekLink = linkRows.find(() => true); // first result is already week-filtered by status
 
   return NextResponse.json({
     registered: true,
-    predictionToken: weekLink?.token ?? null,
+    predictionToken: linkRows[0]?.token ?? null,
   });
 }
