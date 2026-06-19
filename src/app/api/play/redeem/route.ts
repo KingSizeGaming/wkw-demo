@@ -5,6 +5,9 @@ import { links, users, vouchers } from "@/db/schema";
 import { generateToken } from "@/lib/tokens";
 import { getCurrentWeekId, getIsoWeekEndUtc } from "@/lib/week";
 
+// DEMO: `leaderboardId` is caller-asserted and unauthenticated. A caller could
+// burn a valid voucher onto another player's account. PRE-PRODUCTION BLOCKER:
+// tie redemption to an authenticated session before exposing real vouchers.
 export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => null);
   const voucherCode = String(body?.voucherCode ?? "").trim().toUpperCase();

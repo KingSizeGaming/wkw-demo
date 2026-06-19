@@ -1,16 +1,16 @@
 import Image from 'next/image';
-import Link from 'next/link';
+import PillButton from '@/components/ui/PillButton';
 
 export default function HomePage() {
   return (
-    <main
-      className="min-h-screen bg-[url('/images/bg-purple.webp')] bg-cover bg-center flex justify-center items-center"
-      style={{
-        paddingTop: 'env(safe-area-inset-top)',
-        paddingBottom: 'max(env(safe-area-inset-bottom), 80px)',
-      }}
-    >
-      <div className="w-full max-w-screen-sm flex flex-col items-center gap-8 px-8 py-12">
+    <main className="min-h-screen flex justify-center items-center">
+      <div
+        className="w-full max-w-125 min-h-screen flex flex-col items-center justify-center gap-8 px-8 py-12 bg-[url('/images/bg-purple.webp')] bg-cover bg-center"
+        style={{
+          paddingTop: 'env(safe-area-inset-top)',
+          paddingBottom: 'max(env(safe-area-inset-bottom), 80px)',
+        }}
+      >
 
         {/* Logo */}
         <Image
@@ -24,24 +24,18 @@ export default function HomePage() {
         />
 
         {/* Tagline */}
-        <p className="text-[#d4b3e8] text-center text-sm leading-relaxed tracking-wide">
+        <p className="font-hitroad text-lavender text-center text-sm leading-relaxed tracking-wide">
           Predict PSL results. Compete. Win prizes.
         </p>
 
         {/* CTAs */}
         <div className="flex flex-col gap-4 w-full">
-          <Link
-            href="/demo"
-            className="flex items-center justify-center gap-2 w-full h-12 bg-[#25D366] text-white font-black uppercase tracking-wide rounded-full text-sm"
-          >
+          <PillButton href="/demo" variant="whatsapp" className="gap-2">
             <span className="text-base">📱</span> Play on WhatsApp
-          </Link>
-          <Link
-            href="/play"
-            className="flex items-center justify-center w-full h-12 border border-[#f6e8a0] text-[#f6e8a0] font-black uppercase tracking-wide rounded-full text-sm"
-          >
+          </PillButton>
+          <PillButton href="/play" variant="outline">
             Play on Web
-          </Link>
+          </PillButton>
         </div>
 
       </div>

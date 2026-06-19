@@ -1,11 +1,16 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import Image from 'next/image';
+import { usePathname, useRouter } from 'next/navigation';
 import PredictionClient from '@/components/forms/PredictionClient';
-import PlayHomeScreen from '@/components/forms/PlayHomeScreen';
+import PlayHomepage from '@/components/forms/PlayHomepage';
 import StepBar from '@/components/ui/StepBar';
+import PillButton from '@/components/ui/PillButton';
+import PlayTopBar from '@/components/ui/PlayTopBar';
 
+// DEMO: hardcoded identity — every web visitor shares this one SA ID, so all
+// web registrations collapse onto a single synthetic user. PRE-PRODUCTION
+// BLOCKER: replace with the real authenticated identity before launch.
 const MOCK_SA_ID = '9001015009089';
 const MOCK_FIRST_NAME = 'Sipho';
 const MOCK_LAST_NAME = 'Dlamini';
@@ -18,8 +23,23 @@ type StatusData = {
   leaderboardId?: string | null;
 };
 
+// The /play flow is URL-driven so a refresh keeps the user on the same step:
+//   /play          → welcome
+//   /play#tag      → tag input (sub-state of the welcome page)
+//   /play/home     → home
+//   /play/predict  → predict
+function deriveStep(pathname: string, hash: string): Step {
+  if (pathname.startsWith('/play/home')) return 'home';
+  if (pathname.startsWith('/play/predict')) return 'predict';
+  if (hash === '#tag') return 'tag';
+  return 'welcome';
+}
+
 export default function PlayPage() {
-  const [step, setStep] = useState<Step>('welcome');
+  const router = useRouter();
+  const pathname = usePathname();
+  const [hash, setHash] = useState('');
+
   const [statusData, setStatusData] = useState<StatusData | null>(null);
   const [statusLoading, setStatusLoading] = useState(true);
   const [predictionToken, setPredictionToken] = useState<string | null>(null);
@@ -34,6 +54,16 @@ export default function PlayPage() {
   const [registerLoading, setRegisterLoading] = useState(false);
   const [registerError, setRegisterError] = useState<string | null>(null);
 
+  // Keep the hash in sync (hashes are client-only; usePathname ignores them).
+  // Re-sync on path change so browser back/forward between steps stays correct.
+  useEffect(() => {
+    const sync = () => setHash(window.location.hash);
+    sync();
+    window.addEventListener('hashchange', sync);
+    return () => window.removeEventListener('hashchange', sync);
+  }, [pathname]);
+
+  // Status is the source of identity on a fresh load/refresh (mock SA ID is constant).
   useEffect(() => {
     fetch(`/api/play/status?saId=${MOCK_SA_ID}`)
       .then((r) => r.json())
@@ -41,6 +71,37 @@ export default function PlayPage() {
       .catch(() => setStatusData({ registered: false }))
       .finally(() => setStatusLoading(false));
   }, []);
+
+  const step = deriveStep(pathname, hash);
+
+  // Identity falls back to the status response so home/predict survive a refresh.
+  const lbId = leaderboardId ?? statusData?.leaderboardId ?? null;
+  const predToken = predictionToken ?? statusData?.predictionToken ?? null;
+
+  // URL navigation between steps.
+  const goTo = (target: Step) => {
+    if (target === 'tag') {
+      router.push('/play#tag');
+      setHash('#tag');
+    } else if (target === 'home') {
+      router.push('/play/home');
+      setHash('');
+    } else if (target === 'predict') {
+      router.push('/play/predict');
+      setHash('');
+    } else {
+      router.push('/play');
+      setHash('');
+    }
+  };
+
+  // Redirect away from steps that can't be shown (e.g. direct-load /play/predict
+  // with no active pick token → back to home; /play/home while unregistered → welcome).
+  useEffect(() => {
+    if (statusLoading) return;
+    if (step === 'home' && !lbId) router.replace('/play');
+    if (step === 'predict' && !predToken) router.replace('/play/home');
+  }, [step, statusLoading, lbId, predToken, router]);
 
   const handleLetterChange = (i: number, val: string) => {
     const char = val.replace(/[^a-zA-Z]/g, '').toUpperCase().slice(-1);
@@ -58,6 +119,16 @@ export default function PlayPage() {
 
   const allLettersFilled = letters.every((l) => l.length === 1);
   const previewTag = letters.join('');
+
+  // Back navigation: tag → welcome; welcome → site homepage.
+  const handleBack = () => {
+    if (step === 'tag') {
+      setRegisterError(null);
+      goTo('welcome');
+      return;
+    }
+    router.push('/');
+  };
 
   const handleRegisterSubmit = async () => {
     if (!allLettersFilled || registerLoading) return;
@@ -80,7 +151,7 @@ export default function PlayPage() {
         return;
       }
       setLeaderboardId(data.leaderboardId ?? null);
-      setStep('home');
+      goTo('home');
     } catch {
       setRegisterError('Something went wrong. Please try again.');
     } finally {
@@ -88,98 +159,98 @@ export default function PlayPage() {
     }
   };
 
-  // Home step: render PlayHomeScreen directly (full screen, no chrome)
-  if (step === 'home' && leaderboardId) {
+  // Full-screen branded loading (used while identity resolves on direct load).
+  const Loading = (
+    <main className="min-h-screen flex justify-center">
+      <div className="w-full max-w-125 flex items-center justify-center bg-[url('/images/bg-purple.webp')] bg-cover bg-center">
+        <p className="font-hitroad text-lavender">Loading…</p>
+      </div>
+    </main>
+  );
+
+  // Home step: render PlayHomepage directly (full screen, own chrome)
+  if (step === 'home') {
+    if (!lbId) return Loading;
     return (
-      <PlayHomeScreen
-        leaderboardId={leaderboardId}
+      <PlayHomepage
+        leaderboardId={lbId}
+        onBack={() => router.push('/')}
         onPlayNow={(token) => {
           setPredictionToken(token);
-          setStep('predict');
+          goTo('predict');
         }}
       />
     );
   }
 
   // Predict step: render PredictionClient directly (full screen, no chrome)
-  if (step === 'predict' && predictionToken) {
-    return <PredictionClient token={predictionToken} fontClass="font-hitroad" />;
+  if (step === 'predict') {
+    if (!predToken) return Loading;
+    return <PredictionClient token={predToken} fontClass="font-hitroad" />;
   }
 
   return (
-    <main
-      className="min-h-screen bg-[url('/images/bg-purple.webp')] bg-cover bg-center flex justify-center"
-      style={{
-        paddingTop: 'env(safe-area-inset-top)',
-        paddingBottom: 'max(env(safe-area-inset-bottom), 80px)',
-      }}
-    >
-      <div className="w-full max-w-screen-sm flex flex-col">
+    <main className="min-h-screen flex justify-center">
+      <div
+        className="w-full max-w-125 flex flex-col bg-[url('/images/bg-purple.webp')] bg-cover bg-center"
+        style={{
+          paddingTop: 'env(safe-area-inset-top)',
+          paddingBottom: 'max(env(safe-area-inset-bottom), 80px)',
+        }}
+      >
 
         {/* App topbar */}
-        <div className="bg-[#3c004d] px-4 py-3 flex items-center justify-between border-b border-[#5a007a] flex-shrink-0">
-          <Image
-            src="/images/wkw_logo.png"
-            alt="Wina Kasi Wina"
-            width={80}
-            height={32}
-            className="h-8 w-auto"
-          />
-          <span className="bg-[#0057a8] text-white text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded">
-            via Pepkor
-          </span>
-        </div>
+        <PlayTopBar onBack={handleBack} />
 
-        {/* Step progress bar */}
-        <StepBar currentStep={step === 'welcome' ? 1 : 2} />
+        {/* Step progress bar — hidden for returning/registered users, who skip
+            the tag step and go straight to the home page. */}
+        {(step === 'tag' || (step === 'welcome' && !statusLoading && !statusData?.registered)) && (
+          <StepBar currentStep={step === 'welcome' ? 1 : 2} />
+        )}
 
         {/* ── Welcome step ── */}
         {step === 'welcome' && (
           <div className="flex-1 flex flex-col items-center justify-center gap-5 px-6 py-8">
-            <div className="w-14 h-14 rounded-full bg-gradient-to-br from-[#71009a] to-[#3c004d] border-2 border-[#f6e8a0] flex items-center justify-center text-[#f6e8a0] text-lg font-black">
+            <div className="w-14 h-14 rounded-full bg-linear-to-br from-purple-light to-violet-dark border-2 border-yellow-dark flex items-center justify-center text-yellow-dark text-lg font-black">
               {MOCK_FIRST_NAME[0]}{MOCK_LAST_NAME[0]}
             </div>
 
             <div className="text-center">
-              <p className="text-[#d4b3e8] text-sm mb-1">Welcome,</p>
-              <p className="text-[#f6e8a0] text-2xl font-black leading-tight">
-                {MOCK_FIRST_NAME}
-                <br />
-                {MOCK_LAST_NAME}
+              <p className="font-hitroad text-lavender text-sm mb-1">Welcome,</p>
+              <p className="font-hitroad text-yellow-dark text-2xl font-black leading-tight">
+                {MOCK_FIRST_NAME} {MOCK_LAST_NAME}
               </p>
             </div>
 
-            <div className="bg-[#25D366]/10 border border-[#25D366] rounded-lg px-4 py-1.5 text-[#25D366] text-xs font-bold">
+            <div className="font-hitroad bg-whatsapp/10 border border-whatsapp rounded-lg px-4 py-1.5 text-whatsapp text-xs font-bold">
               ✓ Pepkor account verified
             </div>
 
-            <p className="text-[#9b59b6] text-sm text-center leading-relaxed">
+            <p className="font-hitroad text-lavender-muted text-sm text-center leading-relaxed">
               Ready to predict PSL matches and win prizes?
             </p>
 
             {statusLoading && (
-              <p className="text-[#9b59b6] text-sm animate-pulse">Checking account…</p>
+              <p className="font-hitroad text-lavender-muted text-sm animate-pulse">Checking account…</p>
             )}
 
             {!statusLoading && !statusData?.registered && (
-              <button
-                onClick={() => setStep('tag')}
-                className="w-full h-12 bg-[#71009a] text-[#f6e8a0] font-black uppercase tracking-wide rounded-full text-sm mt-2"
-              >
+              <PillButton variant="secondary" fullWidth={false} className="px-4 mt-2" onClick={() => goTo('tag')}>
                 Register to Play
-              </button>
+              </PillButton>
             )}
 
             {!statusLoading && statusData?.registered && (
-              <button
+              <PillButton
+                variant="primary"
+                className="mt-2"
                 onClick={() => {
                   setLeaderboardId(statusData.leaderboardId ?? null);
-                  setStep('home');
+                  goTo('home');
                 }}
-                className="w-full h-12 bg-[#f6e8a0] text-[#220037] font-black uppercase tracking-wide rounded-full text-sm mt-2"
               >
                 Play Now
-              </button>
+              </PillButton>
             )}
           </div>
         )}
@@ -187,7 +258,7 @@ export default function PlayPage() {
         {/* ── Tag input step ── */}
         {step === 'tag' && (
           <div className="flex-1 flex flex-col items-center justify-center gap-5 px-6 py-8">
-            <p className="text-[#f6e8a0] text-xl font-black text-center leading-tight">
+            <p className="font-hitroad text-yellow-dark text-xl font-black text-center leading-tight">
               What should
               <br />
               we call you?
@@ -206,51 +277,48 @@ export default function PlayPage() {
                   onChange={(e) => handleLetterChange(i, e.target.value)}
                   onKeyDown={(e) => handleLetterKeyDown(i, e)}
                   className={[
-                    'w-14 h-16 text-center text-3xl font-black uppercase rounded-xl border-2 bg-white/5 text-[#f6e8a0] focus:outline-none transition-colors',
+                    'font-hitroad w-14 h-16 text-center text-3xl font-black uppercase rounded-xl border-2 bg-white/5 text-yellow-dark focus:outline-none transition-colors',
                     letters[i]
-                      ? 'border-[#f6e8a0] bg-[#71009a]/25'
-                      : 'border-[#71009a]',
+                      ? 'border-yellow-dark bg-purple-light/25'
+                      : 'border-purple-light',
                   ].join(' ')}
                 />
               ))}
             </div>
 
-            <p className="text-[#9b59b6] text-xs">+ 3 digits auto-generated</p>
+            <p className="font-hitroad text-lavender-muted text-xs">+ 3 digits auto-generated</p>
 
             {/* Live ID preview */}
-            <div className="bg-[#71009a]/15 border border-[#71009a] rounded-xl px-8 py-3 text-center w-full">
-              <div className="text-2xl font-black tracking-[0.2em]">
+            <div className="bg-purple-light/15 border border-purple-light rounded-xl px-8 py-3 text-center w-fit">
+              <div className="font-hitroad text-2xl font-black tracking-[0.2em]">
                 {letters.map((l, i) => (
-                  <span key={i} className={l ? 'text-[#c084e8]' : 'text-[#c084e8]/30'}>
+                  <span key={i} className={l ? 'text-purple-accent' : 'text-purple-accent/30'}>
                     {l || '_'}
                   </span>
                 ))}
-                <span className="text-[#c084e8]/30"> •••</span>
+                <span className="text-purple-accent/30"> •••</span>
               </div>
-              <p className="text-[#6b21a8] text-xs mt-1">Your full leaderboard ID</p>
+              <p className="font-hitroad text-lavender-muted text-xs mt-1">Your full leaderboard ID</p>
             </div>
 
             {registerError && (
-              <p className="text-red-400 text-sm text-center">{registerError}</p>
+              <p className="font-hitroad text-danger-light text-sm text-center">{registerError}</p>
             )}
 
             {/* CTA */}
-            <button
+            <PillButton
+              variant="primary"
+              fullWidth={false}
+              className="px-4"
               onClick={handleRegisterSubmit}
               disabled={!allLettersFilled || registerLoading}
-              className={[
-                'w-full h-12 font-black uppercase tracking-wide rounded-full text-sm transition',
-                allLettersFilled && !registerLoading
-                  ? 'bg-[#f6e8a0] text-[#220037] cursor-pointer'
-                  : 'bg-[#f6e8a0]/15 text-[#f6e8a0]/35 cursor-not-allowed',
-              ].join(' ')}
             >
               {registerLoading
                 ? 'Registering…'
                 : allLettersFilled
                 ? 'Confirm Tag'
                 : 'Need 3 letters'}
-            </button>
+            </PillButton>
           </div>
         )}
 
