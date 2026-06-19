@@ -1,6 +1,6 @@
 import { and, asc, eq, gt, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { entries, links, matches, users } from "@/db/schema";
+import { entries, links, matches, plusbPoints, users } from "@/db/schema";
 import {
   getCurrentWeekId,
   incrementWeekId,
@@ -18,6 +18,7 @@ export type PlayHomeResult =
       predictionToken: string | null;
       nextWeekStartDate: string | null;
       entryWeekId: string | null;
+      plusbPoints: number;
       standing: { tag: string; rank: number | null; score: number | null };
     };
 
@@ -52,7 +53,7 @@ async function getStanding(
 
 export async function getPlayHome(leaderboardId: string): Promise<PlayHomeResult> {
   const userRows = await db
-    .select({ waNumber: users.waNumber, leaderboardId: users.leaderboardId })
+    .select({ waNumber: users.waNumber, leaderboardId: users.leaderboardId, saIdHash: users.saIdHash })
     .from(users)
     .where(eq(users.leaderboardId, leaderboardId))
     .limit(1);
@@ -60,12 +61,22 @@ export async function getPlayHome(leaderboardId: string): Promise<PlayHomeResult
   if (userRows.length === 0) {
     return { ok: false, status: 404, error: "user_not_found" };
   }
-  const { waNumber } = userRows[0];
+  const { waNumber, saIdHash } = userRows[0];
+
+  const pointsRows = saIdHash
+    ? await db
+        .select({ balance: plusbPoints.balance })
+        .from(plusbPoints)
+        .where(eq(plusbPoints.saIdHash, saIdHash))
+        .limit(1)
+    : [];
+  const plusbBalance = pointsRows[0]?.balance ?? 0;
   const weekId = getCurrentWeekId();
   const standing = await getStanding(leaderboardId, weekId);
   const base = {
     ok: true as const,
     weekId,
+    plusbPoints: plusbBalance,
     standing: { tag: leaderboardId, rank: standing.rank, score: standing.score },
   };
 
