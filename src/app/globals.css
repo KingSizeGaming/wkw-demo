@@ -9,6 +9,14 @@
   --purple-dark: #220037;
   --purple-light: #71009a;
   --yellow-dark: #f6e8a0;
+  /* Secondary brand colors (web /play flow) */
+  --whatsapp: #25D366;
+  --pepkor-blue: #0057a8;
+  --lavender: #c9a3e0;
+  --lavender-muted: #9b59b6;
+  --purple-accent: #c084e8;
+  --purple-line: #5a007a;
+  --danger-light: #ff9b9b;
 }
 
 @theme inline {
@@ -16,10 +24,17 @@
   --color-foreground: var(--foreground);
   --color-green-dark: var(--green-dark);
   --color-violet-dark: var(--violet-dark);
-  --color-black-dark: var(--black);
+  --color-black-dark: var(--black-dark);
   --color-purple-dark: var(--purple-dark);
   --color-purple-light: var(--purple-light);
   --color-yellow-dark: var(--yellow-dark);
+  --color-whatsapp: var(--whatsapp);
+  --color-pepkor-blue: var(--pepkor-blue);
+  --color-lavender: var(--lavender);
+  --color-lavender-muted: var(--lavender-muted);
+  --color-purple-accent: var(--purple-accent);
+  --color-purple-line: var(--purple-line);
+  --color-danger-light: var(--danger-light);
   --font-sans: "Protest Strike", sans-serif;
   --breakpoint-xs: 320px;
 }
