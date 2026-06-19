@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { matches } from "@/db/schema";
-import { getCurrentWeekId, getRealCurrentWeekId, incrementWeekId } from "@/lib/week";
+import { getCurrentWeekId } from "@/lib/week";
 
 function addDays(date: Date, days: number, hours: number, minutes: number) {
   const next = new Date(date);
@@ -13,7 +13,8 @@ function addDays(date: Date, days: number, hours: number, minutes: number) {
 
 export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => null);
-  const weekId = String(body?.weekId ?? "").trim() || incrementWeekId(getRealCurrentWeekId());
+  // Default to the current week (an explicit body.weekId still overrides).
+  const weekId = String(body?.weekId ?? "").trim() || getCurrentWeekId();
   const configuredWeekId = getCurrentWeekId();
 
   const existing = await db
