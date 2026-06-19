@@ -6,7 +6,8 @@ import { hashSaId } from "@/lib/sa-id-server";
 import { parseSaIdBirthDate } from "@/lib/sa-id";
 
 export async function POST(request: NextRequest) {
-  const expected = process.env.PLUSB_API_TOKEN;
+  const expected = process.env.PLUSB_API_TOKEN
+    ?? (process.env.NODE_ENV === "development" ? "dev" : null);
   if (!expected) {
     return NextResponse.json({ error: "server_misconfigured" }, { status: 500 });
   }
