@@ -381,3 +381,42 @@ export const prizeDraws = pgTable(
     index("prize_draws_wa_number_idx").on(t.waNumber),
   ]
 );
+
+// ---------------------------------------------------------------------------
+// plusb_points
+// Per-person PlusB rewards balance, keyed by sa_id_hash so a balance can exist
+// before the person registers a WKW tag. PlusB credits add to it; web
+// conversions debit it (1 point = 1 prediction entry).
+// ---------------------------------------------------------------------------
+export const plusbPoints = pgTable(
+  "plusb_points",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    saIdHash: text("sa_id_hash").notNull(),
+    balance: integer("balance").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
+  },
+  (t) => [uniqueIndex("plusb_points_sa_id_hash_uq").on(t.saIdHash)]
+);
+
+// ---------------------------------------------------------------------------
+// plusb_credits
+// Idempotency log: one immutable row per PlusB credit. The unique transaction_id
+// prevents double-crediting on retries. Inserted in the same transaction that
+// increments plusb_points.balance.
+// ---------------------------------------------------------------------------
+export const plusbCredits = pgTable(
+  "plusb_credits",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    transactionId: text("transaction_id").notNull(),
+    saIdHash: text("sa_id_hash").notNull(),
+    amount: integer("amount").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("plusb_credits_transaction_id_uq").on(t.transactionId),
+    index("plusb_credits_sa_id_hash_idx").on(t.saIdHash),
+  ]
+);
