@@ -1,15 +1,18 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 
-// Shared chrome for the web /play flow: back button + WKW logo + "via Pepkor" badge.
-export default function PlayTopBar({ onBack }: { onBack: () => void }) {
+// Shared chrome for the web /play flow
+export default function PlayTopBar() {
+  const router = useRouter();
+
   return (
     <div className="bg-violet-dark px-4 py-3 flex items-center justify-between border-b border-purple-line shrink-0">
       <div className="flex items-center gap-2">
         <button
           type="button"
-          onClick={onBack}
+          onClick={() => router.push("/play")}
           aria-label="Go back"
           className="w-8 h-8 -ml-1 flex items-center justify-center rounded-full text-yellow-dark hover:bg-white/10 active:bg-white/15 transition-colors"
         >
