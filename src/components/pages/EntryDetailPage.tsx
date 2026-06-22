@@ -12,12 +12,13 @@ export default async function EntryDetailPage({
   searchParams,
 }: {
   params: Promise<{ leaderboardId: string; weekId: string }>;
-  searchParams?: Promise<{ token?: string; entryId?: string }>;
+  searchParams?: Promise<{ token?: string; entryId?: string; home?: string }>;
 }) {
   const resolvedParams = await params;
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const token = resolvedSearchParams?.token;
   const entryId = resolvedSearchParams?.entryId;
+  const fromPlay = resolvedSearchParams?.home === "play";
 
   const data = await getEntryDetail({
     leaderboardId: resolvedParams.leaderboardId,
@@ -26,7 +27,16 @@ export default async function EntryDetailPage({
     entryId,
   });
 
-  const backHref = `/leaderboard/${resolvedParams.leaderboardId}${token ? `?token=${token}` : ""}`;
+  // Back goes one step to the entries list. In /play, return to the exact view the
+  // user came from — same week filter, with home=play so its own Back reaches /play/home.
+  const backParams = new URLSearchParams();
+  if (token) backParams.set("token", token);
+  if (fromPlay) {
+    backParams.set("weekId", resolvedParams.weekId);
+    backParams.set("home", "play");
+  }
+  const backQuery = backParams.toString();
+  const backHref = `/leaderboard/${resolvedParams.leaderboardId}${backQuery ? `?${backQuery}` : ""}`;
 
   if (!data.ok) {
     return <EntriesErrorModal message={data.error ?? "Unable to load week entry preview."} backHref={backHref} />;

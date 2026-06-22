@@ -16,11 +16,14 @@ export default function WeekList({
   currentWeekId,
   leaderboardId,
   token,
+  fromPlay = false,
 }: {
   weeks: WeekRow[];
   currentWeekId: string;
   leaderboardId: string;
   token?: string;
+  // Carries the /play context into the entry detail page so its Back returns here.
+  fromPlay?: boolean;
 }) {
   const [loadingWeekId, setLoadingWeekId] = useState<string | null>(null);
 
@@ -30,7 +33,7 @@ export default function WeekList({
         {weeks.map((week) => (
           <li key={week.id}>
             <Link
-              href={`/leaderboard/${leaderboardId}/week/${week.weekId}?entryId=${week.id}${token ? `&token=${token}` : ""}`}
+              href={`/leaderboard/${leaderboardId}/week/${week.weekId}?entryId=${week.id}${token ? `&token=${token}` : ""}${fromPlay ? "&home=play" : ""}`}
               onClick={() => setLoadingWeekId(week.weekId)}
             >
               <div className="relative flex min-h-16 items-center justify-between px-7 py-3">
