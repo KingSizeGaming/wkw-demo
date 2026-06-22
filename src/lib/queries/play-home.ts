@@ -1,4 +1,4 @@
-import { and, asc, eq, gt, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gt, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { entries, links, matches, plusbPoints, users } from "@/db/schema";
 import {
@@ -18,6 +18,10 @@ export type PlayHomeResult =
       predictionToken: string | null;
       nextWeekStartDate: string | null;
       entryWeekId: string | null;
+      // Token for the "view picks" link — the entry's own PREDICTION link, which
+      // getEntryDetail accepts for auth even after it's been marked USED. Null when
+      // the user has no entry for the current week.
+      viewToken: string | null;
       plusbPoints: number;
       standing: { tag: string; rank: number | null; score: number | null };
     };
@@ -93,25 +97,19 @@ export async function getPlayHome(leaderboardId: string): Promise<PlayHomeResult
       predictionToken: null,
       nextWeekStartDate: nextWeekStartIso(weekId),
       entryWeekId: null,
+      viewToken: null,
     };
   }
 
+  // Latest entry for this week (if any). Its linkToken authorizes the "view picks"
+  // link. With PlusB conversions a user can submit one entry and still hold more
+  // valid links, so an entry and remaining picks coexist in the single active state.
   const existingEntry = await db
-    .select({ id: entries.id })
+    .select({ linkToken: entries.linkToken })
     .from(entries)
     .where(and(eq(entries.waNumber, waNumber), eq(entries.weekId, weekId)))
+    .orderBy(desc(entries.submittedAt))
     .limit(1);
-
-  if (existingEntry.length > 0) {
-    return {
-      ...base,
-      pickStatus: "picked",
-      picksAvailable: 0,
-      predictionToken: null,
-      nextWeekStartDate: null,
-      entryWeekId: weekId,
-    };
-  }
 
   const validLinks = await db
     .select({ token: links.token })
@@ -133,6 +131,7 @@ export async function getPlayHome(leaderboardId: string): Promise<PlayHomeResult
     picksAvailable: validLinks.length,
     predictionToken: validLinks[0]?.token ?? null,
     nextWeekStartDate: null,
-    entryWeekId: null,
+    entryWeekId: existingEntry.length > 0 ? weekId : null,
+    viewToken: existingEntry[0]?.linkToken ?? null,
   };
 }

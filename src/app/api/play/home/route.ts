@@ -24,6 +24,7 @@ export async function GET(request: NextRequest) {
     predictionToken: result.predictionToken,
     nextWeekStartDate: result.nextWeekStartDate,
     entryWeekId: result.entryWeekId,
+    viewToken: result.viewToken,
     plusbPoints: result.plusbPoints,
     standing: result.standing,
   });
