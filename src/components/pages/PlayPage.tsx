@@ -6,14 +6,15 @@ import PredictionClient from '@/components/forms/PredictionClient';
 import PlayHomepage from '@/components/forms/PlayHomepage';
 import StepBar from '@/components/ui/StepBar';
 import PillButton from '@/components/ui/PillButton';
+import Button from '@/components/ui/Button';
 import PlayTopBar from '@/components/ui/PlayTopBar';
 
 // DEMO: hardcoded identity — every web visitor shares this one SA ID, so all
 // web registrations collapse onto a single synthetic user. PRE-PRODUCTION
 // BLOCKER: replace with the real authenticated identity before launch.
 const MOCK_SA_ID = '9001015009089';
-const MOCK_FIRST_NAME = 'Sipho';
-const MOCK_LAST_NAME = 'Dlamini';
+const MOCK_FIRST_NAME = 'John';
+const MOCK_LAST_NAME = 'Smith';
 
 type Step = 'welcome' | 'tag' | 'home' | 'predict';
 
@@ -120,16 +121,6 @@ export default function PlayPage() {
   const allLettersFilled = letters.every((l) => l.length === 1);
   const previewTag = letters.join('');
 
-  // Back navigation: tag → welcome; welcome → site homepage.
-  const handleBack = () => {
-    if (step === 'tag') {
-      setRegisterError(null);
-      goTo('welcome');
-      return;
-    }
-    router.push('/');
-  };
-
   const handleRegisterSubmit = async () => {
     if (!allLettersFilled || registerLoading) return;
     setRegisterLoading(true);
@@ -174,7 +165,7 @@ export default function PlayPage() {
     return (
       <PlayHomepage
         leaderboardId={lbId}
-        onBack={() => router.push('/')}
+        firstName={MOCK_FIRST_NAME}
         onPlayNow={(token) => {
           setPredictionToken(token);
           goTo('predict');
@@ -186,7 +177,7 @@ export default function PlayPage() {
   // Predict step: render PredictionClient directly (full screen, no chrome)
   if (step === 'predict') {
     if (!predToken) return Loading;
-    return <PredictionClient token={predToken} fontClass="font-hitroad" />;
+    return <PredictionClient token={predToken} fontClass="font-hitroad" onSuccessAction={() => goTo('home')} />;
   }
 
   return (
@@ -200,7 +191,7 @@ export default function PlayPage() {
       >
 
         {/* App topbar */}
-        <PlayTopBar onBack={handleBack} />
+        <PlayTopBar />
 
         {/* Step progress bar — hidden for returning/registered users, who skip
             the tag step and go straight to the home page. */}
@@ -241,16 +232,17 @@ export default function PlayPage() {
             )}
 
             {!statusLoading && statusData?.registered && (
-              <PillButton
-                variant="primary"
-                className="mt-2"
+              <Button
+                type="button"
+                color="blue"
+                className="mt-2 h-11 px-6 text-sm tracking-wider font-hitroad uppercase"
                 onClick={() => {
                   setLeaderboardId(statusData.leaderboardId ?? null);
                   goTo('home');
                 }}
               >
                 Play Now
-              </PillButton>
+              </Button>
             )}
           </div>
         )}

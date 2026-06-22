@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import PillButton from "@/components/ui/PillButton";
+import Button from "@/components/ui/Button";
 import PlayTopBar from "@/components/ui/PlayTopBar";
 import ConvertSuccessModal from "@/components/modals/ConvertSuccessModal";
 
@@ -13,14 +13,15 @@ interface HomeData {
   predictionToken: string | null;
   nextWeekStartDate: string | null;
   entryWeekId: string | null;
+  viewToken: string | null;
   plusbPoints: number;
   standing: Standing;
 }
 
 export interface PlayHomepageProps {
   leaderboardId: string;
+  firstName: string;
   onPlayNow: (predictionToken: string) => void;
-  onBack: () => void;
 }
 
 function formatDate(iso: string | null): string {
@@ -29,7 +30,7 @@ function formatDate(iso: string | null): string {
   return d.toLocaleDateString("en-ZA", { weekday: "short", day: "numeric", month: "short" });
 }
 
-export default function PlayHomepage({ leaderboardId, onPlayNow, onBack }: PlayHomepageProps) {
+export default function PlayHomepage({ leaderboardId, firstName, onPlayNow }: PlayHomepageProps) {
   const [data, setData] = useState<HomeData | null>(null);
   const [loading, setLoading] = useState(true);
   const [convertCount, setConvertCount] = useState(1);
@@ -92,7 +93,7 @@ export default function PlayHomepage({ leaderboardId, onPlayNow, onBack }: PlayH
             paddingBottom: 'max(env(safe-area-inset-bottom), 80px)',
           }}
         >
-          <PlayTopBar onBack={onBack} />
+          <PlayTopBar />
           <p className="font-hitroad flex-1 flex items-center justify-center text-lavender">Loading…</p>
         </div>
       </main>
@@ -100,6 +101,8 @@ export default function PlayHomepage({ leaderboardId, onPlayNow, onBack }: PlayH
   }
 
   const { pickStatus, picksAvailable, predictionToken, standing } = data;
+  // Any PREDICTION token authorizes the user's own (token-gated) leaderboard page.
+  const leaderboardToken = predictionToken ?? data.viewToken;
 
   return (
     <main className="min-h-screen flex justify-center">
@@ -110,57 +113,61 @@ export default function PlayHomepage({ leaderboardId, onPlayNow, onBack }: PlayH
           paddingBottom: 'max(env(safe-area-inset-bottom), 80px)',
         }}
       >
-        <PlayTopBar onBack={onBack} />
+        <PlayTopBar />
 
-        <div className="px-4 sm:px-6 py-5 flex flex-col gap-4">
+        <div className="py-5 flex flex-col gap-1">
           {/* Greeting */}
-          <div>
-            <p className="font-hitroad text-sm text-lavender">Welcome back</p>
-            <p className="font-hitroad text-3xl font-black text-yellow-dark">{leaderboardId}</p>
+          <div className="px-4 sm:px-6">
+            <p className="font-hitroad text-lg">Welcome back, <span className="font-hitroad text-lg font-black text-yellow-dark">{firstName}</span>!</p>
           </div>
 
           {/* Weekly pick card */}
-          <section className="rounded-2xl border border-purple-light bg-violet-dark overflow-hidden">
-            <header className="flex items-center justify-between px-4 py-3 border-b border-purple-light">
-              <span className="font-hitroad text-xs tracking-wide text-white">Week {data.weekId.slice(-2)}</span>
-              <span className="font-hitroad text-[10px] uppercase tracking-wider rounded-full px-2 py-0.5 text-lavender border border-lavender">
-                {pickStatus === "active" ? "Active" : pickStatus === "picked" ? "Submitted" : "No picks"}
-              </span>
-            </header>
+          <section className="relative w-full bg-[url('/images/entry_big_frame_panel.png')] bg-size-[100%_100%] bg-no-repeat">
+            {/* px/py inset keeps content clear of the panel's glow border */}
+            <div className="relative z-10 px-8 py-5">
+              <header className="flex items-center justify-between mb-3 border-b border-white/10 pb-3">
+                <span className="font-hitroad text-xs tracking-wide">Week {data.weekId.slice(-2)}</span>
+                <span className="font-hitroad text-[10px] uppercase tracking-wider rounded-full px-2 py-0.5 border border-lavender">
+                  {pickStatus === "active" ? "Active" : pickStatus === "picked" ? "Submitted" : "No picks"}
+                </span>
+              </header>
 
-            <div className="p-4">
               {pickStatus === "active" && (
-                <>
-                  <div className="flex gap-2 mb-4">
-                    <span className="font-hitroad font-black text-5xl leading-none text-yellow-dark">{picksAvailable}</span>
-                    <span className="font-hitroad text-sm text-lavender">
-                      picks available<br />
-                      <span className="text-xs">1 free · {Math.max(picksAvailable - 1, 0)} from points</span>
-                    </span>
+                <div className="flex flex-col gap-3">
+                  <div className="flex flex-row gap-3 justify-between">
+                    <div className="flex gap-2 items-center shrink-0">
+                      <span className="font-hitroad font-black text-5xl leading-none text-yellow-dark">{picksAvailable}</span>
+                      <span className="font-hitroad text-sm text-lavender">
+                        picks available<br />
+                        <span className="text-xs">1 free · {Math.max(picksAvailable - 1, 0)} from points</span>
+                      </span>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                    <Button
+                      type="button"
+                      color="blue"
+                      className="w-full h-11 text-sm px-4 tracking-wider font-hitroad uppercase"
+                      disabled={picksAvailable === 0 || !predictionToken}
+                      onClick={() => predictionToken && onPlayNow(predictionToken)}
+                    >
+                      Make your pick
+                    </Button>
+                    
+                    {data.entryWeekId && data.viewToken && (
+                      <Button
+                        color="purple"
+                        className="w-full h-11 text-sm px-4 tracking-wider font-hitroad uppercase"
+                        href={`/leaderboard/${encodeURIComponent(leaderboardId)}?token=${encodeURIComponent(data.viewToken)}&weekId=${encodeURIComponent(data.entryWeekId)}&home=play`}
+                      >
+                        View Entries
+                      </Button>
+                    )}
+                    </div>
+                    
                   </div>
-                  <PillButton
-                    type="button"
-                    variant="primary"
-                    disabled={picksAvailable === 0 || !predictionToken}
-                    onClick={() => predictionToken && onPlayNow(predictionToken)}
-                    className="w-full"
-                  >
-                    Make your picks
-                  </PillButton>
-                </>
-              )}
 
-              {pickStatus === "picked" && (
-                <>
-                  <p className="font-hitroad text-sm text-white mb-1">Picks submitted</p>
-                  <p className="font-hitroad text-xs mb-4 text-lavender">Good luck!</p>
-                  <PillButton
-                    variant="outline"
-                    href={`/leaderboard/${encodeURIComponent(leaderboardId)}/week/${data.entryWeekId}`}
-                  >
-                    View your picks →
-                  </PillButton>
-                </>
+                  
+                </div>
               )}
 
               {pickStatus === "not_available" && (
@@ -174,81 +181,99 @@ export default function PlayHomepage({ leaderboardId, onPlayNow, onBack }: PlayH
             </div>
           </section>
 
-          {/* Convert PlusB points — active only */}
+          {/* Convert PlusB points — active only, compact chip layout */}
           {pickStatus === "active" && (
-            <section>
-              <p className="font-hitroad block text-xs mb-2 text-lavender">Convert PlusB points</p>
+            <section className="relative w-full bg-[url('/images/entry_big_frame_panel.png')] bg-size-[100%_100%] bg-no-repeat">
+              <div className="relative z-10 px-8 py-5">
+                <header className="flex items-center justify-between mb-3 border-b border-white/10 pb-3">
+                <span className="font-hitroad text-xs tracking-wide">Convert PlusB points</span>
+                </header>
               {data.plusbPoints === 0 ? (
                 <p className="font-hitroad text-xs text-lavender-muted">No PlusB points yet.</p>
               ) : (
                 <>
-                  <p className="font-hitroad text-sm text-lavender mb-3">
-                    You have <span className="text-yellow-dark">{data.plusbPoints}</span> points
-                  </p>
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2">
+                    <div className="flex flex-col items-center shrink-0 px-3 py-2 border border-purple-line rounded-lg bg-purple-dark">
+                      <span className="font-hitroadtext-xl leading-none text-yellow-dark">{data.plusbPoints}</span>
+                      <span className="font-hitroad text-[9px] text-lavender-muted uppercase tracking-wider mt-0.5">points</span>
+                    </div>
+                    <span className=" leading-none shrink-0">→</span>
+                    <div className="flex items-center border border-purple-line rounded-full overflow-hidden bg-purple-dark shrink-0">
                       <button
                         type="button"
                         onClick={() => setConvertCount((c) => Math.max(1, c - 1))}
                         disabled={convertCount <= 1}
                         aria-label="Fewer entries"
-                        className="font-hitroad w-9 h-9 rounded-full border border-purple-light text-yellow-dark disabled:opacity-40"
+                        className="font-hitroad w-8 h-9 text-yellow-dark disabled:opacity-30"
                       >
                         −
                       </button>
-                      <span className="font-hitroad text-yellow-dark text-lg w-6 text-center [font-variant-numeric:tabular-nums]">
-                        {convertCount}
-                      </span>
+                      <span className="font-hitroad text-yellow-dark text-sm w-5 text-center [font-variant-numeric:tabular-nums]">{convertCount}</span>
                       <button
                         type="button"
                         onClick={() => setConvertCount((c) => Math.min(maxConvert, c + 1))}
                         disabled={convertCount >= maxConvert}
                         aria-label="More entries"
-                        className="font-hitroad w-9 h-9 rounded-full border border-purple-light text-yellow-dark disabled:opacity-40"
+                        className="font-hitroad w-8 h-9 text-yellow-dark disabled:opacity-30"
                       >
                         +
                       </button>
                     </div>
-                    <PillButton type="button" variant="primary" onClick={convert} disabled={converting}>
-                      {converting ? "…" : `Convert ${convertCount} → ${convertCount} ${convertCount === 1 ? "entry" : "entries"}`}
-                    </PillButton>
+                    <Button type="button" color="purple" onClick={convert} disabled={converting} className="flex-1 text-sm py-2 px-4 tracking-wider font-hitroad uppercase">
+                      {converting ? "Converting…" : "Convert"}
+                    </Button>
                   </div>
+                  <p className="font-hitroad text-[10px] text-lavender-muted py-2 text-center tracking-wide">
+                    1 point = 1 entry · max 5 per conversion
+                  </p>
                   {convertError && (
                     <p role="alert" className="font-hitroad text-xs mt-2 text-danger-light">{convertError}</p>
                   )}
                 </>
               )}
+
+              </div>
+              
             </section>
           )}
 
           {/* Leaderboard standing */}
-          <section className="rounded-2xl border border-purple-light bg-violet-dark p-4">
-            <p className="font-hitroad text-xs mb-3 text-lavender">Your standing</p>
-            <div className="flex items-center justify-between">
-              <span className="font-hitroad font-black text-xl text-yellow-dark">{standing.tag}</span>
-              <div className="flex gap-5 [font-variant-numeric:tabular-nums]">
-                <div className="text-center">
-                  <div className="font-hitroad font-black text-2xl text-white leading-none">
-                    {standing.rank === null ? "—" : `#${standing.rank}`}
+          <section className="relative w-full bg-[url('/images/entry_big_frame_panel.png')] bg-size-[100%_100%] bg-no-repeat">
+            <div className="relative z-10 px-8 py-5">
+              <header className="flex items-center justify-between mb-3 border-b border-white/10 pb-3">
+                <span className="font-hitroad text-xs tracking-wide">Leaderboard Ranking</span>
+              </header>
+              <div className="flex items-center justify-between">
+                <span className="font-hitroad font-black text-xl text-yellow-dark">{standing.tag}</span>
+                <div className="flex gap-5 [font-variant-numeric:tabular-nums]">
+                  <div className="text-center">
+                    <div className="font-hitroad font-black text-2xl text-white leading-none">
+                      {standing.rank === null ? "—" : `#${standing.rank}`}
+                    </div>
+                    <div className="font-hitroad text-[10px] uppercase tracking-wide text-lavender">Rank</div>
                   </div>
-                  <div className="font-hitroad text-[10px] uppercase tracking-wide text-lavender">Rank</div>
-                </div>
-                <div className="text-center">
-                  <div className="font-hitroad font-black text-2xl text-white leading-none">
-                    {standing.score === null ? "—" : standing.score}
+                  <div className="text-center">
+                    <div className="font-hitroad font-black text-2xl text-white leading-none">
+                      {standing.score === null ? "—" : standing.score}
+                    </div>
+                    <div className="font-hitroad text-[10px] uppercase tracking-wide text-lavender">Pts</div>
                   </div>
-                  <div className="font-hitroad text-[10px] uppercase tracking-wide text-lavender">Pts</div>
                 </div>
               </div>
+              {/* Full standings list. Pass any PREDICTION token we hold so the viewer's
+                  own row is highlighted, plus home=play so the list page shows the Home button. */}
+              <Button
+                href={
+                  leaderboardToken
+                    ? `/leaderboard?token=${encodeURIComponent(leaderboardToken)}&home=play`
+                    : "/leaderboard?home=play"
+                }
+                color="purple"
+                className="w-full mt-4 h-11 text-sm tracking-wider font-hitroad uppercase"
+              >
+                View Leaderboard
+              </Button>
             </div>
-            {/* DEMO: /play has no leaderboard token, so link to the token-optional
-                full-standings list rather than the token-gated per-user detail page. */}
-            <PillButton
-              href="/leaderboard"
-              className="font-hitroad text-xs mt-3 text-yellow-dark bg-purple-light! w-full"
-            >
-              View Leaderboard
-            </PillButton>
           </section>
         </div>
       </div>
