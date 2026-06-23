@@ -1,5 +1,5 @@
 import Image from 'next/image';
-import PillButton from '@/components/ui/PillButton';
+import Button from '../ui/Button';
 
 export default function HomePage() {
   return (
@@ -23,19 +23,14 @@ export default function HomePage() {
           priority
         />
 
-        {/* Tagline */}
-        <p className="font-hitroad text-lavender text-center text-sm leading-relaxed tracking-wide">
-          Predict PSL results. Compete. Win prizes.
-        </p>
-
         {/* CTAs */}
         <div className="flex flex-col gap-4 w-full">
-          <PillButton href="/demo" variant="whatsapp" className="gap-2">
-            <span className="text-base">📱</span> Play on WhatsApp
-          </PillButton>
-          <PillButton href="/play" variant="outline">
+          <Button href="/demo" color="green" className="uppercase font-hitroad py-4">
+            Play on WhatsApp
+          </Button>
+          <Button href="/play" color="purple" className="uppercase font-hitroad py-4">
             Play on Web
-          </PillButton>
+          </Button>
         </div>
 
       </div>
