@@ -2,7 +2,7 @@ type StepBarProps = {
   currentStep: 1 | 2 | 3;
 };
 
-const LABELS = ['Welcome', 'Your tag', 'Predict'] as const;
+const LABELS = ['Welcome', 'Your tag', 'Ready'] as const;
 
 export default function StepBar({ currentStep }: StepBarProps) {
   return (

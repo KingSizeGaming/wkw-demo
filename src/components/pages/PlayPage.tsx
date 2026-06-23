@@ -5,7 +5,6 @@ import { usePathname, useRouter } from 'next/navigation';
 import PredictionClient from '@/components/forms/PredictionClient';
 import PlayHomepage from '@/components/forms/PlayHomepage';
 import StepBar from '@/components/ui/StepBar';
-import PillButton from '@/components/ui/PillButton';
 import Button from '@/components/ui/Button';
 import PlayTopBar from '@/components/ui/PlayTopBar';
 
@@ -16,7 +15,18 @@ const MOCK_SA_ID = '9001015009089';
 const MOCK_FIRST_NAME = 'John';
 const MOCK_LAST_NAME = 'Smith';
 
-type Step = 'welcome' | 'tag' | 'home' | 'predict';
+// Confetti pieces for the Ready (Kickoff) celebration. Brand colors, spread
+// across the width with staggered delays/durations for an organic rain.
+const CONFETTI_COLORS = ['#f6e8a0', '#25D366', '#c084e8', '#ffffff', '#c9a3e0'];
+const CONFETTI = Array.from({ length: 18 }, (_, i) => ({
+  left: `${(i * 5.3 + 3) % 96}%`,
+  top: `${(i * 9.7) % 78}%`,
+  color: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
+  delay: `${(i % 9) * 0.16}s`,
+  duration: `${1.4 + (i % 5) * 0.2}s`,
+}));
+
+type Step = 'welcome' | 'tag' | 'ready' | 'home' | 'predict';
 
 type StatusData = {
   registered: boolean;
@@ -27,11 +37,13 @@ type StatusData = {
 // The /play flow is URL-driven so a refresh keeps the user on the same step:
 //   /play          → welcome
 //   /play#tag      → tag input (sub-state of the welcome page)
+//   /play#ready    → registration confirmation (sub-state, after tag)
 //   /play/home     → home
 //   /play/predict  → predict
 function deriveStep(pathname: string, hash: string): Step {
   if (pathname.startsWith('/play/home')) return 'home';
   if (pathname.startsWith('/play/predict')) return 'predict';
+  if (hash === '#ready') return 'ready';
   if (hash === '#tag') return 'tag';
   return 'welcome';
 }
@@ -84,6 +96,9 @@ export default function PlayPage() {
     if (target === 'tag') {
       router.push('/play#tag');
       setHash('#tag');
+    } else if (target === 'ready') {
+      router.push('/play#ready');
+      setHash('#ready');
     } else if (target === 'home') {
       router.push('/play/home');
       setHash('');
@@ -100,6 +115,7 @@ export default function PlayPage() {
   // with no active pick token → back to home; /play/home while unregistered → welcome).
   useEffect(() => {
     if (statusLoading) return;
+    if (step === 'ready' && !lbId) router.replace('/play');
     if (step === 'home' && !lbId) router.replace('/play');
     if (step === 'predict' && !predToken) router.replace('/play/home');
   }, [step, statusLoading, lbId, predToken, router]);
@@ -142,7 +158,7 @@ export default function PlayPage() {
         return;
       }
       setLeaderboardId(data.leaderboardId ?? null);
-      goTo('home');
+      goTo('ready');
     } catch {
       setRegisterError('Something went wrong. Please try again.');
     } finally {
@@ -195,8 +211,8 @@ export default function PlayPage() {
 
         {/* Step progress bar — hidden for returning/registered users, who skip
             the tag step and go straight to the home page. */}
-        {(step === 'tag' || (step === 'welcome' && !statusLoading && !statusData?.registered)) && (
-          <StepBar currentStep={step === 'welcome' ? 1 : 2} />
+        {(step === 'tag' || step === 'ready' || (step === 'welcome' && !statusLoading && !statusData?.registered)) && (
+          <StepBar currentStep={step === 'welcome' ? 1 : step === 'tag' ? 2 : 3} />
         )}
 
         {/* ── Welcome step ── */}
@@ -217,18 +233,18 @@ export default function PlayPage() {
               ✓ Pepkor account verified
             </div>
 
-            <p className="font-hitroad text-lavender-muted text-sm text-center leading-relaxed">
+            {/* <p className="font-hitroad text-sm text-center leading-relaxed">
               Ready to predict PSL matches and win prizes?
-            </p>
+            </p> */}
 
             {statusLoading && (
               <p className="font-hitroad text-lavender-muted text-sm animate-pulse">Checking account…</p>
             )}
 
             {!statusLoading && !statusData?.registered && (
-              <PillButton variant="secondary" fullWidth={false} className="px-4 mt-2" onClick={() => goTo('tag')}>
+              <Button color="purple" className="px-4 mt-2 font-hitroad uppercase" onClick={() => goTo('tag')}>
                 Register to Play
-              </PillButton>
+              </Button>
             )}
 
             {!statusLoading && statusData?.registered && (
@@ -249,7 +265,7 @@ export default function PlayPage() {
 
         {/* ── Tag input step ── */}
         {step === 'tag' && (
-          <div className="flex-1 flex flex-col items-center justify-center gap-5 px-6 py-8">
+          <div className="flex-1 flex flex-col items-center justify-center gap-5 px-6 py-8 mx-8 my-2 bg-size-[100%_100%] bg-no-repeat bg-[url('/images/entry_big_frame_panel.png')]">
             <p className="font-hitroad text-yellow-dark text-xl font-black text-center leading-tight">
               What should
               <br />
@@ -269,7 +285,7 @@ export default function PlayPage() {
                   onChange={(e) => handleLetterChange(i, e.target.value)}
                   onKeyDown={(e) => handleLetterKeyDown(i, e)}
                   className={[
-                    'font-hitroad w-14 h-16 text-center text-3xl font-black uppercase rounded-xl border-2 bg-white/5 text-yellow-dark focus:outline-none transition-colors',
+                    "font-hitroad w-14 h-16 text-center text-3xl font-black uppercase rounded-xl border-2 bg-[url('/images/player_points_panel.png')] bg-cover bg-center text-yellow-dark focus:outline-none transition-colors",
                     letters[i]
                       ? 'border-yellow-dark bg-purple-light/25'
                       : 'border-purple-light',
@@ -278,19 +294,19 @@ export default function PlayPage() {
               ))}
             </div>
 
-            <p className="font-hitroad text-lavender-muted text-xs">+ 3 digits auto-generated</p>
+            <p className="font-hitroad text-lavender text-xs">+ 3 digits auto-generated</p>
 
             {/* Live ID preview */}
-            <div className="bg-purple-light/15 border border-purple-light rounded-xl px-8 py-3 text-center w-fit">
+            <div className="bg-[url('/images/player_points_panel.png')] bg-cover bg-center px-10 py-3 text-center">
               <div className="font-hitroad text-2xl font-black tracking-[0.2em]">
                 {letters.map((l, i) => (
-                  <span key={i} className={l ? 'text-purple-accent' : 'text-purple-accent/30'}>
+                  <span key={i} className={l ? 'text-white' : 'text-lavender'}>
                     {l || '_'}
                   </span>
                 ))}
-                <span className="text-purple-accent/30"> •••</span>
+                <span> •••</span>
               </div>
-              <p className="font-hitroad text-lavender-muted text-xs mt-1">Your full leaderboard ID</p>
+              <p className="font-hitroad text-lavender text-xs mt-1">Your full leaderboard ID</p>
             </div>
 
             {registerError && (
@@ -298,10 +314,9 @@ export default function PlayPage() {
             )}
 
             {/* CTA */}
-            <PillButton
-              variant="primary"
-              fullWidth={false}
-              className="px-4"
+            <Button
+              color="purple"
+              className="uppercase font-hitroad tracking-wider"
               onClick={handleRegisterSubmit}
               disabled={!allLettersFilled || registerLoading}
             >
@@ -310,7 +325,63 @@ export default function PlayPage() {
                 : allLettersFilled
                 ? 'Confirm Tag'
                 : 'Need 3 letters'}
-            </PillButton>
+            </Button>
+          </div>
+        )}
+
+        {/* ── Ready step (Kickoff): registration confirmed, launch into play ── */}
+        {step === 'ready' && lbId && (
+          <div className="relative flex-1 flex flex-col items-center justify-center px-6 py-8 overflow-hidden">
+            {/* Confetti party burst (behind content) */}
+            <div className="pointer-events-none absolute inset-0 z-0" aria-hidden="true">
+              {CONFETTI.map((c, i) => (
+                <span
+                  key={i}
+                  className="wkw-confetti"
+                  style={{
+                    left: c.left,
+                    top: c.top,
+                    background: c.color,
+                    animationDelay: c.delay,
+                    animationDuration: c.duration,
+                  }}
+                />
+              ))}
+            </div>
+
+            <div className="relative z-10 flex flex-col items-center gap-5">
+            <p className="font-hitroad text-purple-accent text-xs uppercase tracking-[0.22em]">
+              Match ready
+            </p>
+
+            <p className="font-hitroad text-yellow-dark text-5xl font-black text-center leading-none uppercase">
+              You&apos;re In
+            </p>
+
+            {/* Scoreboard-style leaderboard ID: letters + auto-generated digits */}
+            <div className="flex items-center gap-2 bg-black border border-purple-line rounded-xl px-4 py-3">
+              <span className="font-hitroad text-black text-4xl font-black tracking-wider rounded-lg border border-yellow-dark/25 bg-yellow-dark px-3 py-1">
+                {lbId.slice(0, 3)}
+              </span>
+              {/* <span className="font-hitroad text-lavender-muted text-xs uppercase tracking-[0.2em]">ID</span> */}
+              <span className="font-hitroad text-4xl font-black tracking-wider rounded-lg border border-purple-light/40 bg-purple-light px-3 py-1">
+                {lbId.slice(3)}
+              </span>
+            </div>
+
+            <p className="font-hitroad text-lavender text-sm text-center leading-relaxed max-w-[26ch]">
+              Leaderboard <span className="text-yellow-dark font-black">{lbId} </span> is live. <br />The whistle&apos;s yours.
+            </p>
+
+            {/* CTA */}
+            <Button
+              color="blue"
+              className="uppercase font-hitroad tracking-wider mt-2"
+              onClick={() => goTo('home')}
+            >
+              Kick Off
+            </Button>
+            </div>
           </div>
         )}
 
