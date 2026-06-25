@@ -17,13 +17,19 @@ export async function GET(request: NextRequest) {
   }
 
   const userRows = await db
-    .select({ waNumber: users.waNumber, state: users.state, leaderboardId: users.leaderboardId })
+    .select({
+      waNumber: users.waNumber,
+      state: users.state,
+      leaderboardId: users.leaderboardId,
+      firstName: users.firstName,
+      lastName: users.lastName,
+    })
     .from(users)
     .where(and(eq(users.saIdHash, saIdHash), eq(users.state, 'ACTIVE')))
     .limit(1);
 
   if (userRows.length === 0) {
-    return NextResponse.json({ registered: false, leaderboardId: null });
+    return NextResponse.json({ registered: false, leaderboardId: null, firstName: null, lastName: null });
   }
 
   const weekId = getCurrentWeekId();
@@ -47,5 +53,7 @@ export async function GET(request: NextRequest) {
     registered: true,
     predictionToken: linkRows[0]?.token ?? null,
     leaderboardId: userRows[0].leaderboardId,
+    firstName: userRows[0].firstName,
+    lastName: userRows[0].lastName,
   });
 }

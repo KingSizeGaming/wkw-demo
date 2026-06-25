@@ -8,12 +8,16 @@ import StepBar from '@/components/ui/StepBar';
 import Button from '@/components/ui/Button';
 import PlayTopBar from '@/components/ui/PlayTopBar';
 
-// DEMO: hardcoded identity — every web visitor shares this one SA ID, so all
+// DEMO: hardcoded SA ID — every web visitor shares this one SA ID, so all
 // web registrations collapse onto a single synthetic user. PRE-PRODUCTION
 // BLOCKER: replace with the real authenticated identity before launch.
 const MOCK_SA_ID = '9001015009089';
-const MOCK_FIRST_NAME = 'John';
-const MOCK_LAST_NAME = 'Smith';
+
+// Seed name used ONLY when first registering the demo account (there is no auth
+// or name input in /play). The name shown in the UI is fetched from the DB via
+// /api/play/status — not from these constants.
+const SEED_FIRST_NAME = 'John';
+const SEED_LAST_NAME = 'Smith';
 
 // Confetti pieces for the Ready (Kickoff) celebration. Brand colors, spread
 // across the width with staggered delays/durations for an organic rain.
@@ -32,6 +36,8 @@ type StatusData = {
   registered: boolean;
   predictionToken?: string | null;
   leaderboardId?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
 };
 
 // The /play flow is URL-driven so a refresh keeps the user on the same step:
@@ -91,6 +97,11 @@ export default function PlayPage() {
   const lbId = leaderboardId ?? statusData?.leaderboardId ?? null;
   const predToken = predictionToken ?? statusData?.predictionToken ?? null;
 
+  // Name comes from the DB (the account record), not a hardcoded value.
+  const firstName = statusData?.firstName ?? '';
+  const lastName = statusData?.lastName ?? '';
+  const initials = `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
+
   // URL navigation between steps.
   const goTo = (target: Step) => {
     if (target === 'tag') {
@@ -146,8 +157,8 @@ export default function PlayPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          firstName: MOCK_FIRST_NAME,
-          lastName: MOCK_LAST_NAME,
+          firstName: SEED_FIRST_NAME,
+          lastName: SEED_LAST_NAME,
           saId: MOCK_SA_ID,
           desiredLeaderboardName: previewTag,
         }),
@@ -181,7 +192,7 @@ export default function PlayPage() {
     return (
       <PlayHomepage
         leaderboardId={lbId}
-        firstName={MOCK_FIRST_NAME}
+        firstName={firstName}
         onPlayNow={(token) => {
           setPredictionToken(token);
           goTo('predict');
@@ -219,13 +230,13 @@ export default function PlayPage() {
         {step === 'welcome' && (
           <div className="flex-1 flex flex-col items-center justify-center gap-5 px-6 py-8">
             <div className="w-14 h-14 rounded-full bg-linear-to-br from-purple-light to-violet-dark border-2 border-yellow-dark flex items-center justify-center text-yellow-dark text-lg font-black">
-              {MOCK_FIRST_NAME[0]}{MOCK_LAST_NAME[0]}
+              {initials}
             </div>
 
             <div className="text-center">
               <p className="font-hitroad text-lavender text-sm mb-1">Welcome,</p>
               <p className="font-hitroad text-yellow-dark text-2xl font-black leading-tight">
-                {MOCK_FIRST_NAME} {MOCK_LAST_NAME}
+                {firstName} {lastName}
               </p>
             </div>
 
