@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { and, asc, desc, eq, sql } from "drizzle-orm";
+import { and, asc, desc, eq, or, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { entries, entryPicks, links, matches, users } from "@/db/schema";
 import type { Pick } from "@/lib/scoring";
@@ -134,7 +134,10 @@ export async function POST(
       .select({ leaderboardId: users.leaderboardId })
       .from(users)
       .where(
-        sql`regexp_replace(${users.waNumber}, '[^0-9]', '', 'g') = ${latest[0].waNumber}`
+        or(
+          eq(users.waNumber, latest[0].waNumber),
+          sql`regexp_replace(${users.waNumber}, '[^0-9]', '', 'g') = regexp_replace(${latest[0].waNumber}, '[^0-9]', '', 'g')`
+        )
       )
       .limit(1);
 

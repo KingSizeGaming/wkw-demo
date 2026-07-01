@@ -30,9 +30,16 @@ export default function AdminPage() {
   const [spazaBusy, setSpazaBusy] = useState(false);
   const [voucherBusy, setVoucherBusy] = useState(false);
   const [resetBusy, setResetBusy] = useState(false);
+
+  // Demo PlusB top-up. Targets a player by Leaderboard ID, or the demo account
+  // (John Smith) when left blank.
+  const [plusbLeaderboardId, setPlusbLeaderboardId] = useState("");
+  const [plusbAmount, setPlusbAmount] = useState("5");
+  const [plusbBusy, setPlusbBusy] = useState(false);
+  const [plusbError, setPlusbError] = useState<string | null>(null);
   const [response, setResponse] = useState<ApiResult | null>(null);
   const [activePanel, setActivePanel] = useState<
-    "weekly" | "spaza" | "vouchers" | "matches" | "scores" | "draws" | "users" | "reset"
+    "weekly" | "spaza" | "vouchers" | "matches" | "scores" | "draws" | "users" | "plusb" | "reset"
   >("weekly");
 
   const [userQuery, setUserQuery] = useState("");
@@ -294,6 +301,26 @@ export default function AdminPage() {
     setUserSearchBusy(false);
   };
 
+  const addPlusbPoints = async () => {
+    setPlusbBusy(true);
+    setPlusbError(null);
+    const data = await callApi("/api/admin/plusb", {
+      // Blank Leaderboard ID falls back to the demo account on the server.
+      leaderboardId: plusbLeaderboardId.trim() || undefined,
+      amount: Number(plusbAmount) || 0,
+    });
+    if (data) setResponse(data);
+    if (data && data.ok === false) {
+      const messages: Record<string, string> = {
+        leaderboard_not_found: `No player found with Leaderboard ID “${plusbLeaderboardId.trim().toUpperCase()}”.`,
+        account_has_no_sa_id: "That player has no SA ID on record, so points can't be credited.",
+        invalid_amount: "Enter at least 1 point.",
+      };
+      setPlusbError(messages[data.error ?? ""] ?? data.error ?? "Couldn't add points.");
+    }
+    setPlusbBusy(false);
+  };
+
   const resetDatabase = async () => {
     setResetBusy(true);
     const res = await fetch("/api/dev/reset", { method: "POST" });
@@ -339,6 +366,7 @@ export default function AdminPage() {
               { id: "scores", label: "Scores" },
               { id: "draws", label: "Draws" },
               { id: "users", label: "Users" },
+              { id: "plusb", label: "PlusB Points" },
               { id: "reset", label: "Reset" },
             ].map((item) => (
               <button
@@ -714,6 +742,54 @@ export default function AdminPage() {
                       </div>
                     </div>
                   ))}
+                </div>
+              </>
+            )}
+
+            {activePanel === "plusb" && (
+              <>
+                <h2 className="text-lg font-semibold text-zinc-900">Add PlusB Points</h2>
+                <p className="mt-1 text-sm text-zinc-600">
+                  Demo helper: credit PlusB points to a player by their Leaderboard
+                  ID so they can be converted into extra picks on the web home screen.
+                </p>
+                <div className="mt-4 grid gap-4">
+                  <label className="text-sm text-zinc-700">
+                    Leaderboard ID
+                    <input
+                      className="mt-2 w-full rounded-xl border border-emerald-200 bg-white px-4 py-2 text-sm uppercase text-zinc-900 outline-none transition focus:border-emerald-500"
+                      placeholder="e.g. JOH042"
+                      value={plusbLeaderboardId}
+                      onChange={(event) => {
+                        setPlusbLeaderboardId(event.target.value);
+                        setPlusbError(null);
+                      }}
+                    />
+                    <span className="mt-1 block text-xs italic text-zinc-500">
+                      Note: the final version will credit points by the player&apos;s SA ID
+                      (their verified identity). For now, the demo credits by Leaderboard ID.
+                    </span>
+                  </label>
+                  <label className="text-sm text-zinc-700">
+                    Points to add
+                    <input
+                      type="number"
+                      min={1}
+                      className="mt-2 w-full rounded-xl border border-emerald-200 bg-white px-4 py-2 text-sm text-zinc-900 outline-none transition focus:border-emerald-500"
+                      value={plusbAmount}
+                      onChange={(event) => setPlusbAmount(event.target.value)}
+                    />
+                  </label>
+                  {plusbError && (
+                    <p role="alert" className="text-sm text-rose-600">{plusbError}</p>
+                  )}
+                  <button
+                    className="rounded-2xl bg-[#075E54] px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-200 transition hover:-translate-y-px hover:bg-[#0B6E63] disabled:cursor-not-allowed disabled:opacity-60"
+                    onClick={addPlusbPoints}
+                    disabled={plusbBusy || !plusbLeaderboardId.trim() || Number(plusbAmount) < 1}
+                  >
+                    {plusbBusy ? "Adding..." : "Add Points"}
+                  </button>
                 </div>
               </>
             )}

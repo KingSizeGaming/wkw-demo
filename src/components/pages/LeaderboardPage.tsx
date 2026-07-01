@@ -2,15 +2,19 @@ import Image from "next/image";
 import LeaderboardList from "@/components/LeaderboardList";
 import { getLeaderboardList } from "@/lib/queries/leaderboard";
 import Logo from "../ui/Logo";
+import Button from "../ui/Button";
 
 export default async function LeaderboardPage({
   searchParams,
 }: {
-  searchParams?: Promise<{ weekId?: string; token?: string }>;
+  searchParams?: Promise<{ weekId?: string; token?: string; home?: string }>;
 }) {
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const weekIdQuery = resolvedSearchParams?.weekId;
   const token = resolvedSearchParams?.token;
+  // Only the /play flow passes home=play; the demo/WhatsApp flow omits it, so the
+  // Home button stays hidden there.
+  const fromPlay = resolvedSearchParams?.home === "play";
   const data = await getLeaderboardList({ weekId: weekIdQuery, token });
   const leaderboards = data.leaderboards;
   const hasToken = Boolean(token);
@@ -41,6 +45,18 @@ export default async function LeaderboardPage({
             </div>
           </div>
         </div>
+
+        {fromPlay && (
+          <div className="flex justify-center mt-2">
+            <Button
+              href="/play/home"
+              color="purple"
+              className="h-9 px-6 text-md tracking-wider font-hitroad uppercase"
+            >
+              Home
+            </Button>
+          </div>
+        )}
       </div>
     </main>
   );

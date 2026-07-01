@@ -1,11 +1,15 @@
 "use client";
 
+import Link from "next/link";
+
 type ButtonColor = "red" | "green" | "blue" | "purple";
 type ButtonSize = "sm" | "md" | "lg";
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   color?: ButtonColor;
   size?: ButtonSize;
+  // When set, the button renders as a navigation link instead of a <button>.
+  href?: string;
 }
 
 const colorStyles: Record<ButtonColor, { background: string; border?: string }> = {
@@ -28,7 +32,17 @@ const colorStyles: Record<ButtonColor, { background: string; border?: string }> 
   }
 };
 
-export default function Button({ color = "red", className = "", onKeyDown, onClick, children, ...props }: ButtonProps) {
+export default function Button({ color = "red", className = "", href, onKeyDown, onClick, children, ...props }: ButtonProps) {
+  const baseClass = `cursor-pointer inline-flex items-center justify-center rounded-2xl font-extrabold text-white tracking-wide py-1 px-6 text-lg transition-opacity disabled:opacity-50 disabled:cursor-not-allowed ${className}`;
+
+  if (href) {
+    return (
+      <Link href={href} className={baseClass} style={colorStyles[color]}>
+        {children}
+      </Link>
+    );
+  }
+
   function handleKeyDown(e: React.KeyboardEvent<HTMLButtonElement>) {
     if (e.key === "Enter") {
       e.preventDefault();
@@ -39,7 +53,7 @@ export default function Button({ color = "red", className = "", onKeyDown, onCli
 
   return (
     <button
-      className={`rounded-2xl font-extrabold text-white tracking-wide py-1 px-6 text-lg ${className}`}
+      className={baseClass}
       style={colorStyles[color]}
       onKeyDown={handleKeyDown}
       onClick={onClick}

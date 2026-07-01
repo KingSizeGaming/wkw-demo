@@ -26,7 +26,7 @@ type Match = {
   kickoffAt: string;
 };
 
-export default function PredictionClient({token, fontClass}: {token: string; fontClass: string}) {
+export default function PredictionClient({token, fontClass, onSuccessAction}: {token: string; fontClass: string; onSuccessAction?: () => void}) {
   const [picks, setPicks] = useState<(Pick | null)[]>([]);
   const [matches, setMatches] = useState<Match[]>([]);
   const [matchesLoading, setMatchesLoading] = useState(true);
@@ -84,7 +84,11 @@ export default function PredictionClient({token, fontClass}: {token: string; fon
           /* ignore */
         }
       }
-      if (data.leaderboardUrl) setSuccessCountdown(3);
+      // Demo (no onSuccessAction) auto-closes the tab after a short countdown.
+      // In /play the EntryReceivedModal stays until the user closes it, then redirects.
+      if (!onSuccessAction && data.leaderboardUrl) {
+        setSuccessCountdown(3);
+      }
       setResult(data);
     }
 
@@ -175,7 +179,9 @@ export default function PredictionClient({token, fontClass}: {token: string; fon
       {submitting && <LoadingModal />}
       {confirmOpen && <ConfirmPicksModal onConfirm={confirmSubmit} onCancel={() => setConfirmOpen(false)} submitting={submitting} />}
       {result?.error && <ErrorModal title="Error" message={result.error} onClose={() => setResult(null)} />}
-      {result?.leaderboardUrl && <EntryReceivedModal onClose={() => window.close()} />}
+      {result?.leaderboardUrl && (
+        <EntryReceivedModal onClose={() => (onSuccessAction ? onSuccessAction() : window.close())} />
+      )}
               
       {/* For testing to show success modal*/}
       {/* {true && <EntryReceivedModal onClose={() => window.close()} />} */}

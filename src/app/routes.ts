@@ -8,6 +8,7 @@ import EntriesPage from '@/components/pages/EntriesPage';
 import EntryDetailPage from '@/components/pages/EntryDetailPage';
 import PredictionPage from '@/components/pages/PredictionPage';
 import RegistrationPage from '@/components/pages/RegistrationPage';
+import PlayPage from '@/components/pages/PlayPage';
 
 export interface SearchParams {
   weekId?: string;
@@ -60,6 +61,9 @@ export const routes: Record<string, RouteConfig> = {
   // Simple routes
   demo: {
     component: DemoPage as SimpleComponent,
+  },
+  play: {
+    component: PlayPage as SimpleComponent,
   },
   admin: {
     component: AdminPage as SimpleComponent,

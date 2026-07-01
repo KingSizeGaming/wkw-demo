@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, isNotNull, sql } from "drizzle-orm";
+import { and, asc, desc, eq, isNotNull, or, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { entries, entryPicks, links, matches, users } from "@/db/schema";
 import { getCurrentWeekId } from "@/lib/week";
@@ -41,7 +41,10 @@ export async function getLeaderboardList(opts: {
         .select({ leaderboardId: users.leaderboardId })
         .from(users)
         .where(
-          sql`regexp_replace(${users.waNumber}, '[^0-9]', '', 'g') = ${linkRows[0].waNumber}`
+          or(
+            eq(users.waNumber, linkRows[0].waNumber),
+            sql`regexp_replace(${users.waNumber}, '[^0-9]', '', 'g') = regexp_replace(${linkRows[0].waNumber}, '[^0-9]', '', 'g')`
+          )
         )
         .limit(1);
 
@@ -61,7 +64,7 @@ export async function getLeaderboardList(opts: {
       .from(entries)
       .innerJoin(
         users,
-        sql`regexp_replace(${users.waNumber}, '[^0-9]', '', 'g') = ${entries.waNumber}`
+        sql`(${users.waNumber} = ${entries.waNumber} OR regexp_replace(${users.waNumber}, '[^0-9]', '', 'g') = regexp_replace(${entries.waNumber}, '[^0-9]', '', 'g'))`
       )
       .where(and(eq(entries.weekId, wId), isNotNull(users.leaderboardId)))
       .groupBy(users.leaderboardId)
@@ -159,7 +162,10 @@ export async function getLeaderboardDetail(opts: {
     .select({ leaderboardId: users.leaderboardId, waNumber: users.waNumber })
     .from(users)
     .where(
-      sql`regexp_replace(${users.waNumber}, '[^0-9]', '', 'g') = ${linkRows[0].waNumber}`
+      or(
+        eq(users.waNumber, linkRows[0].waNumber),
+        sql`regexp_replace(${users.waNumber}, '[^0-9]', '', 'g') = regexp_replace(${linkRows[0].waNumber}, '[^0-9]', '', 'g')`
+      )
     )
     .limit(1);
 
@@ -248,7 +254,10 @@ export async function getEntryDetail(opts: {
     .select({ leaderboardId: users.leaderboardId })
     .from(users)
     .where(
-      sql`regexp_replace(${users.waNumber}, '[^0-9]', '', 'g') = ${linkRows[0].waNumber}`
+      or(
+        eq(users.waNumber, linkRows[0].waNumber),
+        sql`regexp_replace(${users.waNumber}, '[^0-9]', '', 'g') = regexp_replace(${linkRows[0].waNumber}, '[^0-9]', '', 'g')`
+      )
     )
     .limit(1);
 

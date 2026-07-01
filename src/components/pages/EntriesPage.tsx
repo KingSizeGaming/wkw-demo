@@ -6,17 +6,21 @@ import WeekList from '@/components/WeekList';
 import Logo from '../ui/Logo';
 import EntriesErrorModal from '@/components/modals/EntriesErrorModal';
 
-export default async function EntriesPage({params, searchParams}: {params: Promise<{leaderboardId: string}>; searchParams?: Promise<{weekId?: string; token?: string}>}) {
+export default async function EntriesPage({params, searchParams}: {params: Promise<{leaderboardId: string}>; searchParams?: Promise<{weekId?: string; token?: string; home?: string}>}) {
   const resolvedParams = await params;
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const currentWeekId = getCurrentWeekId();
   const weekIdQuery = resolvedSearchParams?.weekId;
   const token = resolvedSearchParams?.token;
+  const fromPlay = resolvedSearchParams?.home === "play";
+  // In the /play flow, Back returns to the play homepage; otherwise to the standings list.
+  const backHref = fromPlay
+    ? "/play/home"
+    : `/leaderboard?weekId=${weekIdQuery ?? currentWeekId}${token ? `&token=${token}` : ''}`;
 
   const data = await getLeaderboardDetail({ leaderboardId: resolvedParams.leaderboardId, weekId: weekIdQuery, token });
 
   if (!data.ok) {
-    const backHref = `/leaderboard${weekIdQuery ? `?weekId=${weekIdQuery}` : ''}`;
     return <EntriesErrorModal message={data.error ?? 'Unable to view this leaderboard.'} backHref={backHref} />;
   }
 
@@ -38,13 +42,13 @@ export default async function EntriesPage({params, searchParams}: {params: Promi
               <span className="flex items-center text-yellow-dark font-semibold justify-center text-lg uppercase">Current Week: {currentWeekId}</span>
             </div>
             <div className="flex-1 max-h-[60%] mx-2 sm:mx-6 overflow-y-auto wkw-scrollbar">
-              {data.weeks.length === 0 ? <p className="text-center text-sm text-white">No entries found.</p> : <WeekList weeks={data.weeks} currentWeekId={currentWeekId} leaderboardId={data.leaderboardId} token={token} />}
+              {data.weeks.length === 0 ? <p className="text-center text-sm text-white">No entries found.</p> : <WeekList weeks={data.weeks} currentWeekId={currentWeekId} leaderboardId={data.leaderboardId} token={token} fromPlay={fromPlay} />}
             </div>
           </div>
         </div>
         <div className="flex justify-center -mt-3">
           <Link
-            href={`/leaderboard?weekId=${data.weekId}${token ? `&token=${token}` : ''}`}
+            href={backHref}
             className="w-32 h-12 sm:w-40 sm:h-14 bg-[url('/images/back_button_untapped.png')] bg-contain bg-center bg-no-repeat active:bg-[url('/images/back_button_tapped.png')] block"
           />
         </div>
